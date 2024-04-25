@@ -1,7 +1,7 @@
 <p align="center">
 
   <h1 align="center">
-    CliPP-ShinyApp: Web version of CliPP <a href="https://bioinformatics.mdanderson.org/apps/CliPP">https://bioinformatics.mdanderson.org/apps/CliPP 
+   CliPP-ShinyApp is the web version of CliPP: <a href="https://bioinformatics.mdanderson.org/apps/CliPP">https://bioinformatics.mdanderson.org/apps/CliPP 
   </h1>
 
   <p align="center">
