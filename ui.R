@@ -31,16 +31,29 @@ ui <- fluidPage(
     p("Wenyi Wang - ", a(href = "wwang7@mdanderson.org", "wwang7@mdanderson.org")),
     p("Quang Tran - ", a(href = "qmtran@mdanderson.org", "qmtran@mdanderson.org")),
     br(),
-    p("Please choose files to upload using the form below:")
-  ),
+    p("The online tool requires three files as input: SNV File, CNA File and Cancer Purity File.
+  Please check the three links below to download the example files:"),
+    p(a("SNV file", href="sample.snv.txt", download="sample.snv.txt"), 
+      "TSV file with columns: chromosome_index, position, ref_count, alt_count", br(),
+      a("CNA file", href="sample.cna.txt", download="sample.cna.txt"), 
+      "TSV file with columns: chromosome_index, start_position, end_position, major_cn, minor_cn, and total_cn", br(),
+      a("Purity file", href="sample.purity.txt", download="sample.purity.txt"), 
+      "File storing a scalar purity value between 0 and 1")
+    ),
   sidebarLayout(
     sidebarPanel(
-      fileInput("file1", "SNV file:"),
-      fileInput("file2", "CNA file:"),
-      fileInput("file3", "Purity file:"),
+      fileInput("file1", "SNV file:", multiple = FALSE),
+      fileInput("file2", "CNA file:", multiple = FALSE),
+      fileInput("file3", "Purity file:", multiple = FALSE),
       actionButton("submit", "Submit", class = "btn-primary")
     ),
     mainPanel(
+      ui <- fluidPage(
+        plotlyOutput("plot1")
+      ),
+      ui <- fluidPage(
+        plotlyOutput("plot2")
+      ),
       h4("Output:"),
       textOutput("result"),
       selectInput("selectedFile", "Choose a file to download:", choices = c()),
