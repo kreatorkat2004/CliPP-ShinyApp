@@ -1,4 +1,7 @@
+library(plotly)
+library(shinyjs)
 ui <- fluidPage(
+  shinyjs::useShinyjs(), 
   titlePanel("CliPP-on-Web: Clonal structure identification through penalizing pairwise differences"),
   # Introduction
   tags$div(
@@ -25,11 +28,13 @@ ui <- fluidPage(
     p("Yujie Jiang, Matthew D Montierth, Kaixian Yu, Shuangxi Ji, Shuai Guo, Quang Tran, Seung Jun Shin, Shaolong Cao, 
       Ruonan Li, Yuxin Tang, Tom Lesluyes, Scott Kopetz, Jaffer Ajani, Pavlos Msaouel, Sumit K Subudhi, Ana Aparicio, 
       Padmanee Sharma, John Paul Shen, Anil K. Sood, Maxime Tarabichi, Jennifer R. Wang, Marek Kimmel, Peter Van Loo, 
-      Hongtu Zhu, Wenyi Wang. Pan-cancer subclonal mutation analysis of 7,827 tumors predicts clinical outcome. Nature Genetics 2024."),
+      Hongtu Zhu, Wenyi Wang, Aaron Wu. Pan-cancer subclonal mutation analysis of 7,827 tumors predicts clinical outcome."),
     br(),
     p("For issues with the app, please contact:"),
     p("Wenyi Wang - ", a(href = "wwang7@mdanderson.org", "wwang7@mdanderson.org")),
     p("Quang Tran - ", a(href = "qmtran@mdanderson.org", "qmtran@mdanderson.org")),
+    p("Matthew Montierth - ", a(href = "montiert@bcm.edu", "montiert@bcm.edu")),
+    p("Aaron Wu - ", a(href = "aw80@rice.edu", "aw80@rice.edu")),
     br(),
     p("The online tool requires three files as input: SNV File, CNA File and Cancer Purity File.
   Please check the three links below to download the example files:"),
@@ -39,25 +44,41 @@ ui <- fluidPage(
       "TSV file with columns: chromosome_index, start_position, end_position, major_cn, minor_cn, and total_cn", br(),
       a("Purity file", href="sample.purity.txt", download="sample.purity.txt"), 
       "File storing a scalar purity value between 0 and 1")
-    ),
+  ),
   sidebarLayout(
     sidebarPanel(
-      fileInput("file1", "SNV file:", multiple = FALSE),
-      fileInput("file2", "CNA file:", multiple = FALSE),
-      fileInput("file3", "Purity file:", multiple = FALSE),
-      actionButton("submit", "Submit", class = "btn-primary")
+      # Two inputs that alternate upload mode
+      radioButtons("uploadMode", "Choose your upload method:",
+                   choices = list("Upload all files at once" = "all_at_once",
+                                  "Upload files individually" = "individually"),
+                   selected = "all_at_once"),
+      
+      # Number input to give amount of samples
+      numericInput("numSamples", "Number of samples:", min = 1, max = 10, value = 1),
+      actionButton("setSamples", "Set Samples", class = "btn-primary"),
+      br(),
+      uiOutput("dynamicFileInputs"),
+      actionButton("uploadSamples", "Upload Samples", class = "btn-primary"),
+      br(),
+      selectInput("selectedSample", "Select a sample to analyze:", choices = NULL),
+      actionButton("submit", "Submit", class = "btn-primary"),
+      # Adds the smoothing slider
+      conditionalPanel(
+        condition = "output.plotReadyText == 'true'", 
+        sliderInput("smoothingFactor1", "Smoothing Factor for Plot 1:",
+                    min = 0.2, max = 0.7, value = 0.5, step = 0.1),
+        sliderInput("smoothingFactor2", "Smoothing Factor for Plot 2:",
+                    min = 0.2, max = 0.7, value = 0.5, step = 0.1)
+      )
     ),
+    # Produces the main plots
     mainPanel(
-      ui <- fluidPage(
-        plotlyOutput("plot1")
-      ),
-      ui <- fluidPage(
-        plotlyOutput("plot2")
-      ),
-      h4("Output:"),
-      textOutput("result"),
-      selectInput("selectedFile", "Choose a file to download:", choices = c()),
-      downloadButton("downloadResult", "Download Result")
+      plotlyOutput("plot1"),
+      uiOutput("caption1"),
+      plotlyOutput("plot2"),
+      uiOutput("caption2"),
+      uiOutput("plotOutputArea"),
+      hidden(div(id = "plotReadyText")), 
     )
   )
 )
