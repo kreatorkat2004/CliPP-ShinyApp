@@ -24,6 +24,11 @@ sample_data <- rbind(sample_PCAWG, sample_TCGA)
 # Load driver mutation data
 driver_mutation_data <- read.delim("./driver_mut_data.tsv")
 
+driver_mutation_data$cancer <- gsub("RCCC", "KIRC", driver_mutation_data$cancer)
+driver_mutation_data$cancer <- gsub("COREAD", "CRC", driver_mutation_data$cancer)
+driver_mutation_data$cancer <- gsub("AML", "LAML", driver_mutation_data$cancer)
+driver_mutation_data$cancer <- gsub("CM", "SKCM", driver_mutation_data$cancer)
+
 # Shiny server logic
 server <- function(input, output, session) {
   
