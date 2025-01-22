@@ -6,17 +6,49 @@ library(shinyWidgets)
 # UI for the Shiny application
 ui <- fluidPage(
   # shinyjs for additional JavaScript functionality
-  shinyjs::useShinyjs(), 
+  tags$head(includeHTML("google-analytics.html")),
+  shinyjs::useShinyjs(),
   # CSS for styling a progress bar overlay
   tags$head(
     tags$style(HTML("
+      /* Progress bar styling */
       #progress {
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 50%;  
+        width: 50%;
         z-index: 9999;
+      }
+      
+      /* Plot and controls layout */
+      .plot-container {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+      .plot-with-controls {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 10px;
+      }
+      .plot-area {
+        flex: 3;
+      }
+      .controls-area {
+        flex: 1;
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 8px;
+        min-width: 200px;
+      }
+      .caption-area {
+        width: 100%;
+        margin-bottom: 30px;
+      }
+      .recommended-smoothing {
+        font-size: 0.9em;
+        color: #666;
+        margin-top: 10px;
       }
     "))
   ),
@@ -55,9 +87,10 @@ ui <- fluidPage(
                       tags$div(
                         tags$h4(tags$b("Video Tutorial")),
                         tags$p("Watch the video below to learn how to use the CliPP-on-Web application:"),
-                        tags$iframe(src="https://www.youtube.com/embed/ZPX_hC-uiYA", 
-                                    style="width:80%; height:700px; border:none;"))),
-             
+                        tags$iframe(src="https://www.youtube.com/embed/ZPX_hC-uiYA",
+                                    style="width:80%; height:700px; border:none;")
+                      )
+             ),
              
              # Page 3: Main functionality for uploading and analyzing data with CliPP-on-Web
              tabPanel("CliPP-on-Web",
@@ -69,20 +102,19 @@ ui <- fluidPage(
                           sidebarPanel(
                             tags$div(
                               p("The online tool requires three files as input: SNV File, CNA File and Cancer Purity File.
-                                Please check the three links below to download the example files:"),
-                              p(a("SNV file", href="sample.snv.txt", download="sample.snv.txt"), 
+                Please check the three links below to download the example files:"),
+                              p(a("SNV file", href="sample.snv.txt", download="sample.snv.txt"),
                                 "TSV file with columns: chromosome_index, position, ref_count, alt_count", br(),
-                                a("CNA file", href="sample.cna.txt", download="sample.cna.txt"), 
+                                a("CNA file", href="sample.cna.txt", download="sample.cna.txt"),
                                 "TSV file with columns: chromosome_index, start_position, end_position, major_cn, minor_cn, and total_cn", br(),
-                                a("Purity file", href="sample.purity.txt", download="sample.purity.txt"), 
-                                "File storing a scalar purity value between 0 and 1"),
-                              p("When uploading files, please ensure the file names contain the appropriate suffixes (e.g., snv.txt, cna.txt, purity.txt) to help the application correctly identify and process them.")
+                                a("Purity file", href="sample.purity.txt", download="sample.purity.txt"),
+                                "File storing a scalar purity value between 0 and 1"
+                              )
                             ),
                             radioButtons("uploadMode", "Choose your upload method:",
                                          choices = list("Upload all files at once" = "all_at_once",
                                                         "Upload files individually" = "individually"),
                                          selected = "all_at_once"),
-                            
                             numericInput("numSamples", "Number of samples:", min = 1, max = 10, value = 1),
                             actionButton("setSamples", "Set Samples", class = "btn-primary"),
                             br(),
@@ -91,23 +123,76 @@ ui <- fluidPage(
                             br(),
                             hidden(selectInput("selectedSample", "Select a sample to analyze:", choices = NULL)),
                             hidden(actionButton("submit", "Submit", class = "btn-primary")),
-                            hidden(selectInput("colorBy", "Color points by:", choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), selected = "clonality")),
+                            hidden(selectInput("colorBy", "Color points by:", 
+                                               choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), 
+                                               selected = "clonality")),
                             #selectInput("penaltyType", "Select Penalty Type:", choices = c("Lasso", "MCP"), selected = "Lasso"),
-                            hidden(sliderInput("smoothingFactor1", "Smoothing Factor for VAF Plot:",
-                                               min = 0.2, max = 0.7, value = 0.45, step = 0.05)),
-                            uiOutput("smoothingExplanation1"),
-                            hidden(sliderInput("smoothingFactor2", "Smoothing Factor for CP Plot:",
-                                               min = 0.2, max = 0.7, value = 0.45)),
-                            uiOutput("smoothingExplanation2"),
                             hidden(actionButton("clear", "Clear", class = "btn-danger"))
                           ),
                           
                           # Main panel to display plots and analysis output
                           mainPanel(
-                            plotlyOutput("plot1"),
-                            uiOutput("caption1"),
-                            plotlyOutput("plot2"),
-                            uiOutput("caption2"),
+                            # First plot container 
+                            div(class = "plot-container",
+                                div(class = "plot-area",
+                                    plotlyOutput("plot1")
+                                ),
+                                hidden(div(class = "controls-area",
+                                           sliderInput("smoothingFactor1", "Smoothing Factor:",
+                                                       min = 0.2, max = 0.7, value = 0.45, width = "100%"),
+                                           div(class = "recommended-smoothing",
+                                               uiOutput("smoothingExplanation1")
+                                           )
+                                )),
+                                div(class = "caption-area",
+                                    uiOutput("caption1")
+                                )
+                            ),
+                            
+                            # Second plot container 
+                            div(class = "plot-container",
+                                div(class = "plot-area",
+                                    plotlyOutput("plot2")
+                                ),
+                                hidden(div(class = "controls-area",
+                                           sliderInput("smoothingFactor2", "Smoothing Factor:",
+                                                       min = 0.2, max = 0.7, value = 0.45, width = "100%"),
+                                           div(class = "recommended-smoothing",
+                                               uiOutput("smoothingExplanation2")
+                                           )
+                                )),
+                                div(class = "caption-area",
+                                    uiOutput("caption2")
+                                )
+                            ),
+                            
+                            # CSS for layout
+                            tags$head(
+                              tags$style(HTML("
+                                .plot-container {
+                                position: relative;
+                                width: 100%;
+                                height: 600px;
+                              }
+                              .plot-area {
+                                width: 100%;
+                              }
+                              .controls-area {
+                                position: absolute;
+                                right: 20px;
+                                top: 100px;
+                                width: 300px;
+                                background: #f5f5f5;
+                                padding: 15px;
+                                border-radius: 8px;
+                                z-index: 10;
+                              }
+                              .caption-area {
+                                margin-top: 20px;
+                              }
+                            "))
+                            ),
+                            
                             uiOutput("plotOutputArea"),
                             hidden(div(id = "plotReadyTextCliPP")),
                             shinyjs::hidden(
@@ -136,20 +221,50 @@ ui <- fluidPage(
                                          uiOutput("cancer_type_ui_TCGA"),
                                          uiOutput("sample_name_ui_TCGA"),
                                          actionButton("submitTCGA", "Submit", class = "btn-primary"),
-                                         hidden(selectInput("colorByTCGA", "Color points by:", choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), selected = "clonality")),
-                                         #selectInput("penaltyType", "Select Penalty Type:", choices = c("Lasso", "MCP"), selected = "Lasso"),
-                                         hidden(sliderInput("smoothingFactor1_TCGA", "Smoothing Factor for VAF Plot:",
-                                                            min = 0.2, max = 0.7, value = 0.45, step = 0.05)),
-                                         uiOutput("smoothingExplanation1_TCGA"),
-                                         hidden(sliderInput("smoothingFactor2_TCGA", "Smoothing Factor for CP Plot:",
-                                                            min = 0.2, max = 0.7, value = 0.45)),
-                                         uiOutput("smoothingExplanation2_TCGA")
+                                         hidden(selectInput("colorByTCGA", "Color points by:", 
+                                                            choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), 
+                                                            selected = "clonality"))
                                        ),
+                                       #selectInput("penaltyType", "Select Penalty Type:", choices = c("Lasso", "MCP"), selected = "Lasso"),
                                        mainPanel(
-                                         plotlyOutput("plot1TCGA"),
-                                         uiOutput("caption1TCGA"),
-                                         plotlyOutput("plot2TCGA"),
-                                         uiOutput("caption2TCGA"),
+                                         # First TCGA plot container
+                                         div(class = "plot-container",
+                                             div(class = "plot-with-controls",
+                                                 div(class = "plot-area",
+                                                     plotlyOutput("plot1TCGA")
+                                                 ),
+                                                 div(class = "controls-area",
+                                                     sliderInput("smoothingFactor1_TCGA", "Smoothing Factor:",
+                                                                 min = 0.2, max = 0.7, value = 0.45, width = "100%"),
+                                                     div(class = "recommended-smoothing",
+                                                         uiOutput("smoothingExplanation1_TCGA")
+                                                     )
+                                                 )
+                                             ),
+                                             div(class = "caption-area",
+                                                 uiOutput("caption1TCGA")
+                                             )
+                                         ),
+                                         
+                                         # Second TCGA plot container
+                                         div(class = "plot-container",
+                                             div(class = "plot-with-controls",
+                                                 div(class = "plot-area",
+                                                     plotlyOutput("plot2TCGA")
+                                                 ),
+                                                 div(class = "controls-area",
+                                                     sliderInput("smoothingFactor2_TCGA", "Smoothing Factor:",
+                                                                 min = 0.2, max = 0.7, value = 0.45, width = "100%"),
+                                                     div(class = "recommended-smoothing",
+                                                         uiOutput("smoothingExplanation2_TCGA")
+                                                     )
+                                                 )
+                                             ),
+                                             div(class = "caption-area",
+                                                 uiOutput("caption2TCGA")
+                                             )
+                                         ),
+                                         
                                          hidden(uiOutput("plotOutputAreaTCGA")),
                                          hidden(div(id = "plotReadyTextTCGA")),
                                          uiOutput("downloadUI_TCGA")
@@ -157,6 +272,7 @@ ui <- fluidPage(
                                      )
                                    )
                           ),
+                          
                           # Subsection for PCAWG data selection and analysis
                           tabPanel("PCAWG",
                                    tags$div(
@@ -166,20 +282,50 @@ ui <- fluidPage(
                                          uiOutput("cancer_type_ui_PCAWG"),
                                          uiOutput("sample_name_ui_PCAWG"),
                                          actionButton("submitPCAWG", "Submit", class = "btn-primary"),
-                                         hidden(selectInput("colorByPCAWG", "Color points by:", choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), selected = "clonality")),
-                                         #selectInput("penaltyType", "Select Penalty Type:", choices = c("Lasso", "MCP"), selected = "Lasso"),
-                                         hidden(sliderInput("smoothingFactor1_PCAWG", "Smoothing Factor for VAF Plot:",
-                                                            min = 0.2, max = 0.7, value = 0.45, step = 0.05)),
-                                         uiOutput("smoothingExplanation1_PCAWG"),
-                                         hidden(sliderInput("smoothingFactor2_PCAWG", "Smoothing Factor for CP Plot:",
-                                                            min = 0.2, max = 0.7, value = 0.45)),
-                                         uiOutput("smoothingExplanation2_PCAWG")
+                                         hidden(selectInput("colorByPCAWG", "Color points by:", 
+                                                            choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), 
+                                                            selected = "clonality"))
                                        ),
+                                       #selectInput("penaltyType", "Select Penalty Type:", choices = c("Lasso", "MCP"), selected = "Lasso"),
                                        mainPanel(
-                                         plotlyOutput("plot1PCAWG"),
-                                         uiOutput("caption1PCAWG"),
-                                         plotlyOutput("plot2PCAWG"),
-                                         uiOutput("caption2PCAWG"),
+                                         # First PCAWG plot container
+                                         div(class = "plot-container",
+                                             div(class = "plot-with-controls",
+                                                 div(class = "plot-area",
+                                                     plotlyOutput("plot1PCAWG")
+                                                 ),
+                                                 div(class = "controls-area",
+                                                     sliderInput("smoothingFactor1_PCAWG", "Smoothing Factor:",
+                                                                 min = 0.2, max = 0.7, value = 0.45, width = "100%"),
+                                                     div(class = "recommended-smoothing",
+                                                         uiOutput("smoothingExplanation1_PCAWG")
+                                                     )
+                                                 )
+                                             ),
+                                             div(class = "caption-area",
+                                                 uiOutput("caption1PCAWG")
+                                             )
+                                         ),
+                                         
+                                         # Second PCAWG plot container
+                                         div(class = "plot-container",
+                                             div(class = "plot-with-controls",
+                                                 div(class = "plot-area",
+                                                     plotlyOutput("plot2PCAWG")
+                                                 ),
+                                                 div(class = "controls-area",
+                                                     sliderInput("smoothingFactor2_PCAWG", "Smoothing Factor:",
+                                                                 min = 0.2, max = 0.7, value = 0.45, width = "100%"),
+                                                     div(class = "recommended-smoothing",
+                                                         uiOutput("smoothingExplanation2_PCAWG")
+                                                     )
+                                                 )
+                                             ),
+                                             div(class = "caption-area",
+                                                 uiOutput("caption2PCAWG")
+                                             )
+                                         ),
+                                         
                                          hidden(uiOutput("plotOutputAreaPCAWG")),
                                          hidden(div(id = "plotReadyTextPCAWG")),
                                          uiOutput("downloadUI_PCAWG")
@@ -193,18 +339,53 @@ ui <- fluidPage(
              
              # Page 5: Driver Mutation analysis tool
              tabPanel("Driver Mutation",
-                      tags$div(
-                        sidebarLayout(
-                          sidebarPanel(
-                            uiOutput("cancer_type_ui_driver"),
+                      sidebarLayout(
+                        sidebarPanel(
+                          uiOutput("cancer_type_ui_driver")
+                        ),
+                        mainPanel(
+                          DT::DTOutput("driverMutationTable"),
+                          uiOutput("selectedMutationInfo"),
+                          downloadButton("downloadDriverMutation", "Download Data"),
+                          tags$h4(tags$b(tags$span("Reference:"))),
+                          p("Martínez-Jiménez, Francisco, et al. 'A compendium of mutational cancer driver genes.' Nature Reviews Cancer 20.10 (2020): 555-572."),
+                          
+                          # First driver mutation plot container
+                          div(class = "plot-container",
+                              div(class = "plot-with-controls",
+                                  div(class = "plot-area",
+                                      plotlyOutput("driverPlot1")
+                                  ),
+                                  div(class = "controls-area",
+                                      sliderInput("smoothingFactor1_driver", "Smoothing Factor:",
+                                                  min = 0.2, max = 0.7, value = 0.45, width = "100%"),
+                                      div(class = "recommended-smoothing",
+                                          uiOutput("smoothingExplanation1_driver")
+                                      )
+                                  )
+                              ),
+                              div(class = "caption-area",
+                                  uiOutput("driverCaption1")
+                              )
                           ),
-                          mainPanel(
-                            DT::DTOutput("driverMutationTable"),
-                            shinyjs::hidden(downloadButton("downloadDriverMutation", "Download Data")),
-                            tags$h4(tags$b(tags$span("Reference:"))),
-                            p("Martínez-Jiménez, Francisco, Ferran Muiños, Inés Sentís, Jordi Deu-Pons, Iker Reyes-Salazar, Claudia Arnedo-Pac, Loris Mularoni et al. 
-             'A compendium of mutational cancer driver genes.' Nature Reviews Cancer 20, no. 10 (2020): 555-572.")
-                            
+                          
+                          # Second driver mutation plot container
+                          div(class = "plot-container",
+                              div(class = "plot-with-controls",
+                                  div(class = "plot-area",
+                                      plotlyOutput("driverPlot2")
+                                  ),
+                                  div(class = "controls-area",
+                                      sliderInput("smoothingFactor2_driver", "Smoothing Factor:",
+                                                  min = 0.2, max = 0.7, value = 0.45, width = "100%"),
+                                      div(class = "recommended-smoothing",
+                                          uiOutput("smoothingExplanation2_driver")
+                                      )
+                                  )
+                              ),
+                              div(class = "caption-area",
+                                  uiOutput("driverCaption2")
+                              )
                           )
                         )
                       )
@@ -214,14 +395,14 @@ ui <- fluidPage(
              tabPanel("Citations",
                       tags$div(
                         tags$h4(tags$b(tags$span("Manuscript under preparation:"))),
-                        p("Yujie Jiang, Matthew D Montierth, Kaixian Yu, Shuangxi Ji, 
-                          Quang Tran, Xiaoqian Liu, Jessica C Lal, Shuai Guo, Aaron Wu, 
-                          Seung Jun Shin, Shaolong Cao, Ruonan Li, Yuxin Tang, Tom Lesluyes, 
-                          Scott Kopetz, Pavlos Msaouel, Anil K. Sood, Christopher Jones, Jaffer Ajani, 
-                          Sumit K Subudhi, Ana Aparicio, Padmanee Sharma, John Paul Shen,  Marek Kimmel, 
-                          Jennifer R. Wang, Maxime Tarabichi, Rebecca Fitzgerald, Peter Van Loo, Hongtu Zhu, 
-                          Wenyi Wang. Subclonal mutational load predicts survival and response to immunotherapy 
-                          in cancers with low to moderate TMB.",
+                        p("Yujie Jiang, Matthew D Montierth, Kaixian Yu, Shuangxi Ji,
+           Quang Tran, Xiaoqian Liu, Jessica C Lal, Shuai Guo, Aaron Wu,
+           Seung Jun Shin, Shaolong Cao, Ruonan Li, Yuxin Tang, Tom Lesluyes,
+           Scott Kopetz, Pavlos Msaouel, Anil K. Sood, Christopher Jones, Jaffer Ajani,
+           Sumit K Subudhi, Ana Aparicio, Padmanee Sharma, John Paul Shen, Marek Kimmel,
+           Jennifer R. Wang, Maxime Tarabichi, Rebecca Fitzgerald, Peter Van Loo, Hongtu Zhu,
+           Wenyi Wang. Subclonal mutational load predicts survival and response to immunotherapy
+           in cancers with low to moderate TMB.",
                           a(href = "https://www.biorxiv.org/content/10.1101/2024.07.03.601939v1",
                             "https://www.biorxiv.org/content/10.1101/2024.07.03.601939v1"),".")
                       )
