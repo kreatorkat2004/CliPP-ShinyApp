@@ -11,15 +11,15 @@
    </a>
    <a href="https://github.com/wwylab/CliPP-ShinyApp/issues" target="_blank">
      <img alt="Github Issues"
-          src="https://img.shields.io/github/issues/stjude/RNAIndel" />
+          src="https://img.shields.io/github/issues/wwylab/CliPP-ShinyApp" />
    </a>
    <a href="https://github.com/wwylab/CliPP-ShinyApp/pulls" target="_blank">
      <img alt="Pull Requests"
           src="https://img.shields.io/github/issues-pr/wwylab/CliPP-ShinyApp" />
    </a>
    <a href="https://github.com/wwylab/CliPP-ShinyApp/blob/master/LICENSE.md" target="_blank">
-     <img alt="License: MIT"
-          src="https://img.shields.io/badge/License-MIT-blue.svg" />
+     <img alt="License: GPLv3"
+          src="https://img.shields.io/badge/License-GPLv3-blue.svg" />
    </a>
    <br />
   </p>
@@ -53,9 +53,11 @@ CliPP: <a href="https://github.com/wwylab/CliPP">https://github.com/wwylab/CliPP
 Manuscript under preparation
 
 ## Contact
-* qmtran[AT]mdanderson.org
-* wwang7[AT]mdanderson.org
+* aw80@rice.edu
+* montiert@bcm.edu
+* qmtran@mdanderson.org
+* wwang7@mdanderson.org
 
 ---
 ## COPYRIGHT 
-Copyright 2024 Wang Lab at MD Anderson. All rights reserved.
+@2024 The University of Texas MD Anderson Cancer Center

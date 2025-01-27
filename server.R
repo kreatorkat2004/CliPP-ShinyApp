@@ -6,6 +6,7 @@ library(plotly)
 library(readr)
 library(shinyjs)
 library(DT)
+library(tidyr)
 
 #old_path <- Sys.getenv("PATH")
 #Sys.setenv(PATH = paste("/usr/local/R/4.2.0/bin", old_path, sep = ":"))
@@ -198,6 +199,8 @@ server <- function(input, output, session) {
     shinyjs::hide("caption2")
     shinyjs::hide("smoothingFactor1")
     shinyjs::hide("smoothingFactor2")
+    shinyjs::hide("smoothingExplanation1")  
+    shinyjs::hide("smoothingExplanation2")
     shinyjs::show("setSamples")
     shinyjs::enable("numSamples")
     plotsReadyCliPP(FALSE)
@@ -344,6 +347,7 @@ server <- function(input, output, session) {
   # Observe plot readiness and render plots
   observe({
     req(plotsReadyCliPP())
+    shinyjs::show(selector = ".controls-area")
     
     # Plot 1
     output$plot1 <- renderPlotly({
@@ -819,6 +823,7 @@ server <- function(input, output, session) {
     
     observe({
       req(plotsReadyPrefix())
+      shinyjs::show(selector = paste0(".controls-area-", prefix))
       
       # Plot 1
       output[[paste0("plot1", prefix)]] <- renderPlotly({
@@ -1120,7 +1125,7 @@ server <- function(input, output, session) {
             ggpubr::theme_pubr() + xlab("Estimated mutation-specific CP") + ylab("Density") +
             theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
             geom_segment(data = df_subc, aes(x = cellular_prevalence, xend = cellular_prevalence, y = 0, yend = 5.7), lty = "dashed")
-
+          
           ggplotly(gg2)
         }
       })
@@ -1217,7 +1222,7 @@ server <- function(input, output, session) {
   output$gene_name_ui_driver <- renderUI({
     selectInput("gene_name_driver", "Select Gene:", choices = NULL)
   })
-
+  
   # Using reactive expression to reorder data
   driver_data <- reactive({
     selected_cancer_type <- input$cancer_type_driver
@@ -1239,8 +1244,9 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$cancer_type_driver, {
-    selected_cancer_type <- input$cancer_type_driver
+    shinyjs::hide("smoothingControls")
     
+    selected_cancer_type <- input$cancer_type_driver
     selected_data <- driver_mutation_data %>% filter(cancer == selected_cancer_type)
     
     if (nrow(selected_data) == 0) {
@@ -1248,37 +1254,248 @@ server <- function(input, output, session) {
       return()
     }
     
-    selected_data <- selected_data %>%
-      mutate(cancer = selected_cancer_type)
+    # Calculate total mutations and recommended smoothing factor
+    total_mutations <- nrow(selected_data)
     
+    # Calculate recommended smoothing factor
+    recommended_smoothing_factor <- function(total_mutations) {
+      min_smooth <- 0.2
+      max_smooth <- 0.7
+      min_mut <- 100
+      max_mut <- 10000
+      smoothing_factor <- max_smooth - (total_mutations - min_mut) * (max_smooth - min_smooth) / (max_mut - min_mut)
+      smoothing_factor <- max(min_smooth, min(max_smooth, smoothing_factor))
+      return(round(smoothing_factor, 2))
+    }
+    recommended_smooth <- recommended_smoothing_factor(total_mutations)
+    
+    # Update smoothing explanations
+    output$smoothingExplanation1_driver <- renderUI({
+      HTML(paste0(
+        "<div style='margin: 10px 0;'>",
+        "The recommended smoothing factor is ", recommended_smooth,
+        " based on ", total_mutations, " mutations in this cancer type. ",
+        "Adjust it to refine the VAF plot.",
+        "</div>"
+      ))
+    })
+    
+    output$smoothingExplanation2_driver <- renderUI({
+      HTML(paste0(
+        "<div style='margin: 10px 0;'>",
+        "The recommended smoothing factor is ", recommended_smooth,
+        " based on ", total_mutations, " mutations in this cancer type. ",
+        "Adjust it to refine the CP plot.",
+        "</div>"
+      ))
+    })
+    
+    # Render initial plots with all data points
+    output$driverPlot1 <- renderPlotly({
+      gg1 <- ggplot(selected_data, aes(x = VAF)) +
+        geom_density(fill = "gray", alpha = .6, adjust = input$smoothingFactor1_driver) +
+        geom_point(
+          shape = 142,
+          size = 5,
+          alpha = 0.3,
+          aes(
+            y = -0.75,
+            color = Subclonality
+          )
+        ) +
+        xlim(0, 1) +
+        ggtitle(paste("VAF Distribution -", selected_cancer_type)) +
+        ggpubr::theme_pubr() +
+        xlab("VAF") + ylab("Density") +
+        scale_color_manual(values = c("Clonal" = "#87CEEB", "Subclonal" = "#FFA07A")) +
+        theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+      ggplotly(gg1)
+    })
+    
+    output$driverPlot2 <- renderPlotly({
+      gg2 <- ggplot(selected_data, aes(x = CP_unpenalized)) +
+        geom_density(fill = "seagreen", alpha = .6, adjust = input$smoothingFactor2_driver) +
+        geom_point(
+          shape = 142,
+          size = 5,
+          alpha = 0.3,
+          aes(
+            y = -0.75,
+            color = Subclonality
+          )
+        ) +
+        xlim(0, 1.5) +
+        ggtitle(paste("CP Distribution -", selected_cancer_type)) +
+        ggpubr::theme_pubr() +
+        xlab("CP") + ylab("Density") +
+        scale_color_manual(values = c("Clonal" = "#87CEEB", "Subclonal" = "#FFA07A")) +
+        theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+      ggplotly(gg2)
+    })
+    
+    # Update the data table
     output$driverMutationTable <- DT::renderDataTable({
-      selected_data <- driver_data()
-      if (is.null(selected_data)) return()
-      
       DT::datatable(
-        selected_data %>% select(gene, sample, protein, consequence, Subclonality, VAF, CP_unpenalized),
+        selected_data %>% 
+          select(gene, sample, protein, consequence, Subclonality, VAF, CP_unpenalized),
+        selection = 'single',
         options = list(
           pageLength = 10,
           searchHighlight = TRUE,
           autoWidth = FALSE,
           columnDefs = list(
             list(width = '30px', targets = 0:6)
-          ),
-          scrollX = TRUE
+          )
         ),
         rownames = FALSE
       ) %>%
         DT::formatStyle(
-          columns = c('gene', 'sample', 'protein', 'consequence', 'Subclonality', 'VAF', 'CP_unpenalized'),
-          `white-space` = 'normal'  
-        ) %>%
-        DT::formatStyle(
           'Subclonality',
-          backgroundColor = DT::styleEqual(c("Clonal", "Subclonal"), c('#C9EDEF', '#FED9D7')),
+          backgroundColor = DT::styleEqual(
+            c("Clonal", "Subclonal"), 
+            c('#C9EDEF', '#FED9D7')
+          ),
           color = 'black'
         )
     })
   })
+    
+  output$driverMutationPlots <- renderUI({
+    if (!is.null(input$cancer_type_driver)) {
+      tagList(
+        tabsetPanel(
+          tabPanel("Plots",
+                   # Add smoothing explanations above the plots
+                   uiOutput("smoothingExplanation1_driver"),
+                   plotlyOutput("driverPlot1"),
+                   uiOutput("driverCaption1"),
+                   
+                   uiOutput("smoothingExplanation2_driver"),
+                   plotlyOutput("driverPlot2"),
+                   uiOutput("driverCaption2")
+          ),
+          tabPanel("Data Table",
+                   DT::DTOutput("driverMutationTable"),
+                   shinyjs::hidden(downloadButton("downloadDriverMutation", "Download Data")),
+                   tags$h4(tags$b(tags$span("Reference:"))),
+                   p("Martínez-Jiménez, Francisco, et al. 'A compendium of mutational cancer driver genes.' Nature Reviews Cancer 20.10 (2020): 555-572.")
+          )
+        )
+      )
+    }
+  })
+  
+  observe({
+    req(input$cancer_type_driver)
+    selected_data <- driver_data()
+    
+    if (is.null(selected_data)) return()
+    
+    output$driverMutationTable <- DT::renderDataTable({
+      DT::datatable(
+        selected_data %>% 
+          select(gene, sample, protein, consequence, Subclonality, VAF, CP_unpenalized),
+        selection = 'single',
+        options = list(
+          pageLength = 10,
+          searchHighlight = TRUE,
+          autoWidth = FALSE,
+          columnDefs = list(
+            list(width = '30px', targets = 0:6)
+          )
+        ),
+        rownames = FALSE
+      ) %>%
+        DT::formatStyle(
+          'Subclonality',
+          backgroundColor = DT::styleEqual(
+            c("Clonal", "Subclonal"), 
+            c('#C9EDEF', '#FED9D7')
+          ),
+          color = 'black'
+        )
+    })
+    
+    # When a row is selected, update the plots to highlight the selected mutation
+    observeEvent(input$driverMutationTable_rows_selected, {
+      row_selected <- input$driverMutationTable_rows_selected
+      if (is.null(row_selected)) {
+        return()
+      }
+      
+      selected_cancer_type <- input$cancer_type_driver
+      selected_data <- driver_data()
+      if (is.null(selected_data)) return()
+      
+      selected_row <- selected_data[row_selected, ]
+      
+      output$driverPlot1 <- renderPlotly({
+        # Filter data for the selected gene
+        gene_data <- selected_data[selected_data$gene == selected_row$gene, ]
+        
+        gg1 <- ggplot(gene_data, aes(x = VAF)) +
+          geom_density(fill = "gray", alpha = .6, adjust = input$smoothingFactor1_driver) +
+          geom_vline(xintercept = selected_row$VAF, linetype = "dashed", color = "black") +
+          geom_point(
+            shape = 142,
+            size = 5,
+            alpha = 0.3,
+            aes(
+              y = -0.75,
+              color = Subclonality
+            )
+          ) +
+          xlim(0, 1) +
+          ggtitle(paste("VAF Distribution -", selected_row$gene)) +
+          ggpubr::theme_pubr() +
+          xlab("VAF") + ylab("Density") +
+          scale_color_manual(values = c("Clonal" = "#87CEEB", "Subclonal" = "#FFA07A")) +
+          theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+        ggplotly(gg1)
+      })
+      
+      output$driverPlot2 <- renderPlotly({
+        # Filter data for the selected gene
+        gene_data <- selected_data[selected_data$gene == selected_row$gene, ]
+        
+        gg2 <- ggplot(gene_data, aes(x = CP_unpenalized)) +
+          geom_density(fill = "seagreen", alpha = .6, adjust = input$smoothingFactor2_driver) +
+          geom_vline(xintercept = selected_row$CP_unpenalized, linetype = "dashed", color = "black") +
+          geom_point(
+            shape = 142,
+            size = 5,
+            alpha = 0.3,
+            aes(
+              y = -0.75,
+              color = Subclonality
+            )
+          ) +
+          xlim(0, 1.5) +
+          ggtitle(paste("CP Distribution -", selected_row$gene)) +
+          ggpubr::theme_pubr() +
+          xlab("CP") + ylab("Density") +
+          scale_color_manual(values = c("Clonal" = "#87CEEB", "Subclonal" = "#FFA07A")) +
+          theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+        ggplotly(gg2)
+      })
+    })
+      
+      output$driverCaption1 <- renderUI({
+        HTML("<p>
+    - <b>Variant Allele Frequency (VAF)</b> indicates the proportion of sequencing reads that support a variant allele.<br>
+    - <b>Mean read depth</b> is the average number of sequencing reads per SNV, influencing data reliability.<br>
+    - <b>Density</b> estimates the probability density function of VAFs based on kernel density estimation (KDE).<br>
+  </p>")
+      })
+      
+      output$driverCaption2 <- renderUI({
+        HTML("<p>
+    - <b>Cellular Prevalence (CP)</b> the fraction of all cells (both tumor and admixed normal cells) from the sequenced tissue carrying a particular SNV.<br>
+    - Annotations on the x-axis indicate whether mutations are <b>clonal</b> (present in all tumor cells) or <b>subclonal</b> (found in a subset).<br>
+    - Counts of clonal and subclonal mutations are indicated as <b>n clonal</b> and <b>n subclonal</b> respectively.<br>
+  </p>")
+      })
+    })
   
   observe({
     selected_data <- driver_data()
@@ -1329,16 +1546,37 @@ server <- function(input, output, session) {
   
   output$downloadDriverMutation <- downloadHandler(
     filename = function() {
-      paste("Driver_Mutation_Data-", selected_cancer_type, "-", Sys.Date(), ".csv", sep = "")
+      paste("Driver_Mutation_Data-", input$cancer_type_driver, "-", Sys.Date(), ".txt", sep = "")
     },
     content = function(file) {
       selected_cancer_type <- input$cancer_type_driver
       if (!is.null(selected_cancer_type)) {
-        selected_data <- driver_mutation_data %>%
-          filter(cancer == selected_cancer_type) %>%
+        selected_data <- driver_data() %>%
           select(gene, protein, consequence, cancer, Subclonality, VAF, CP_unpenalized)
-        write.csv(selected_data, file, row.names = FALSE)
+        
+        if (!is.null(selected_data) && nrow(selected_data) > 0) {
+          header <- paste(colnames(selected_data), collapse = "\t")
+          
+          rows <- apply(selected_data, 1, function(x) paste(x, collapse = "\t"))
+          
+          content <- c(header, rows)
+          
+          writeLines(content, file)
+        } else {
+          writeLines("No data available", file)
+        }
       }
-    }
+    },
+    contentType = "text/plain"
   )
+  
+  # Add observer to control button visibility
+  observe({
+    selected_data <- driver_data()
+    if (!is.null(selected_data) && nrow(selected_data) > 0) {
+      shinyjs::show("downloadDriverMutation")
+    } else {
+      shinyjs::hide("downloadDriverMutation")
+    }
+  })
 }
