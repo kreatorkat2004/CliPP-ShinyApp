@@ -2,6 +2,7 @@ library(shiny)
 library(plotly)
 library(shinyjs)
 library(shinyWidgets)
+library(DT)
 
 # Function to write UI plot elements
 create_plot_container <- function(plot_output_id, smoothing_id, explanation_id, caption_id) {
@@ -85,7 +86,6 @@ ui <- fluidPage(
   
   # Multi-page navigation structure
   navbarPage("",
-             
              # Page 1: About section with application description and contact info
              tabPanel("About",
                       tags$div(
@@ -149,8 +149,8 @@ ui <- fluidPage(
                             br(),
                             hidden(selectInput("selectedSample", "Select a sample to analyze:", choices = NULL)),
                             hidden(actionButton("submit", "Submit", class = "btn-primary")),
-                            hidden(selectInput("colorBy", "Color points by:", 
-                                               choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), 
+                            hidden(selectInput("colorBy", "Color points by:",
+                                               choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"),
                                                selected = "clonality")),
                             hidden(actionButton("clear", "Clear", class = "btn-danger"))
                           ),
@@ -193,14 +193,14 @@ ui <- fluidPage(
                                          uiOutput("sample_name_ui_TCGA"),
                                          actionButton("submitTCGA", "Submit", class = "btn-primary"),
                                          hidden(actionButton("clearTCGA", "Clear", class = "btn-danger")),
-                                         hidden(selectInput("colorByTCGA", "Color points by:", 
-                                                            choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), 
+                                         hidden(selectInput("colorByTCGA", "Color points by:",
+                                                            choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"),
                                                             selected = "clonality"))
                                        ),
                                        mainPanel(
                                          # First TCGA plot container
                                          create_plot_container(
-                                           paste0("plot1TCGA"), 
+                                           paste0("plot1TCGA"),
                                            paste0("smoothingFactor1_TCGA"),
                                            paste0("smoothingExplanation1_TCGA"),
                                            paste0("caption1TCGA")
@@ -208,7 +208,7 @@ ui <- fluidPage(
                                          
                                          # Second TCGA plot container
                                          create_plot_container(
-                                           paste0("plot2TCGA"), 
+                                           paste0("plot2TCGA"),
                                            paste0("smoothingFactor2_TCGA"),
                                            paste0("smoothingExplanation2_TCGA"),
                                            paste0("caption2TCGA")
@@ -232,14 +232,14 @@ ui <- fluidPage(
                                          uiOutput("sample_name_ui_PCAWG"),
                                          hidden(actionButton("clearPCAWG", "Clear", class = "btn-danger")),
                                          actionButton("submitPCAWG", "Submit", class = "btn-primary"),
-                                         hidden(selectInput("colorByPCAWG", "Color points by:", 
-                                                            choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"), 
+                                         hidden(selectInput("colorByPCAWG", "Color points by:",
+                                                            choices = list("Clonality" = "clonality", "Read Depth" = "readDepth"),
                                                             selected = "clonality"))
                                        ),
                                        mainPanel(
                                          # First PCAWG plot container
                                          create_plot_container(
-                                           paste0("plot1PCAWG"), 
+                                           paste0("plot1PCAWG"),
                                            paste0("smoothingFactor1_PCAWG"),
                                            paste0("smoothingExplanation1_PCAWG"),
                                            paste0("caption1PCAWG")
@@ -247,7 +247,7 @@ ui <- fluidPage(
                                          
                                          # Second PCAWG plot container
                                          create_plot_container(
-                                           paste0("plot2PCAWG"), 
+                                           paste0("plot2PCAWG"),
                                            paste0("smoothingFactor2_PCAWG"),
                                            paste0("smoothingExplanation2_PCAWG"),
                                            paste0("caption2PCAWG")
