@@ -17,6 +17,10 @@ library(shinyjs)
 library(DT)
 library(tidyr)
 
+#old_path <- Sys.getenv("PATH")
+#Sys.setenv(PATH = paste("/usr/local/R/4.2.0/bin", old_path, sep = ":"))
+#Sys.setenv(LD_LIBRARY_PATH="/usr/local/gcc/7.0.0/lib64")
+
 # Global variables
 global_TCGA_PCAWG <- "dataSource"
 
